@@ -16,7 +16,7 @@ To regenerate the list of packages, build the docker image from
 
 ```bash
 docker build -t binster -f list.dockerfile .
-./list.sh > list
+./generate_package_list.sh > list
 ```
 
 Each line should look like:
