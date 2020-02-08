@@ -3,6 +3,5 @@ from angr/angr:latest
 user angr
 workdir /home/angr
 run /home/angr/.virtualenvs/angr/bin/pip install stopit
-copy download.sh /home/angr
-copy process.py /home/angr
-#entrypoint [ "/home/angr/download.sh" ]
+copy process_package.sh /home/angr
+copy analyze_binary.py /home/angr

@@ -21,20 +21,20 @@ docker build -t binster -f list.dockerfile .
 
 Each line should look like:
 ```
-./download.sh s/sssd/sssd-dbus-dbgsym_1.15.0-3+deb9u1_ppc64el.deb #sssd-dbus-ppc64el.deb
+./process_package.sh s/sssd/sssd-dbus-dbgsym_1.15.0-3+deb9u1_ppc64el.deb #sssd-dbus-ppc64el.deb
 ```
 
 Running the experiment
 ----------------------
-The `list` file contains invocations of the `download.sh` script for the set of
+The `list` file contains invocations of the `process_package.sh` script for the set of
 packages.
 
-The `download.sh` script does the processing for a single package. It will
+The `process_package.sh` script does the processing for a single package. It will
 download the package and corresponding debug symbols package from the Debian
 repository, extract the packages, discover any executable files, then attempt to
-do an analysis via `process.py` on each executable.
+do an analysis via `analyze_binary.py` on each executable.
 
-`process.py` will attempt to load the executable, construct the CFG, enumerate
+`analyze_binary.py` will attempt to load the executable, construct the CFG, enumerate
 all symbols, and attempt to decompile each symbol. Crashes and timeouts are
 captured and logged.
 
@@ -48,7 +48,7 @@ docker build -t yourname/megatest .
 Now you can run a single experiment locally with:
 
 ```
-docker run yourname/megatest ./download.sh s/sssd/sssd-dbus-dbgsym_1.15.0-3+deb9u1_ppc64el.deb
+docker run yourname/megatest ./process_package.sh s/sssd/sssd-dbus-dbgsym_1.15.0-3+deb9u1_ppc64el.deb
 ```
 
 You can perform large-scale distributed analysis by submitting jobs from the list file. [kuboid](https://github.com/zardus/kuboid) is good for this purpose.
