@@ -1,1 +1,66 @@
-# megatest
+angr megatest
+=============
+Tools for large-scale program analysis over the Debian package set, spanning
+many architectures.
+
+Regenerating list of packages
+-----------------------------
+The list of packages that are tested come straight from the Debian repositories.
+To regenerate the list of packages, build the docker image from the
+`list.dockerfile`, then run the list.sh script.
+
+```bash
+docker build -t binster -f list.dockerfile .
+./list.sh > list
+```
+
+Each line should look like:
+```
+./download.sh s/sssd/sssd-dbus-dbgsym_1.15.0-3+deb9u1_ppc64el.deb #sssd-dbus-ppc64el.deb
+```
+
+Running the experiment
+----------------------
+The `list` file contains invocations of the `download.sh` script for the set of
+packages.
+
+The `download.sh` script does the processing for a single package. It will
+download the package and corresponding debug symbols package from the Debian
+repository, extract the packages, discover any executable files, then attempt to
+do an analysis via `process.py` on each executable.
+
+`process.py` will attempt to load the executable, construct the CFG, enumerate
+all symbols, and attempt to decompile each symbol. Crashes and timeouts are
+captured and logged.
+
+megatest is designed to be containerized and run on a large-scale Kubernetes
+cluster. To build the container:
+
+```
+docker build -t yourname/megatest .
+```
+
+Now you can run a single experiment locally with:
+
+```
+docker run yourname/megatest ./download.sh s/sssd/sssd-dbus-dbgsym_1.15.0-3+deb9u1_ppc64el.deb
+```
+
+You can perform large-scale distributed analysis by submitting jobs from the list file. [kuboid](https://github.com/zardus/kuboid) is good for this purpose.
+
+First make sure you have pushed your container to DockerHub:
+
+```
+docker push yourname/megatest
+```
+
+Then you can then run the experiment with:
+
+```
+monitor_experiment -f list -l logs_20200131 -i yourname/megatest
+```
+
+**WARNING:** Understand that you will be spinning up over 100k containers
+to do this analysis. This can incur significant cost. Consider limiting your
+testing to check for stability/usage statistics before burning through your 
+cloud budget.
