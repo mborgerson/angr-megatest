@@ -1,7 +1,7 @@
 angr megatest
 =============
-Tools for large-scale program analysis over the Debian package set, spanning
-many architectures.
+Tools for large-scale program analysis over the Debian stretch package set,
+spanning many architectures.
 
 **WARNING:** Understand that you will be spinning up over 100k containers
 to do this analysis. This can incur significant cost. Consider limiting your
