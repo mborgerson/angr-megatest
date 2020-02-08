@@ -12,7 +12,7 @@ Regenerating list of packages
 -----------------------------
 The list of packages that are tested come straight from the Debian repositories.
 To regenerate the list of packages, build the docker image from
-`list.dockerfile`, then run the `list.sh` script.
+`list.dockerfile`, then run the `generate_package_list.sh` script.
 
 ```bash
 docker build -t binster -f list.dockerfile .
