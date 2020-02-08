@@ -4,4 +4,4 @@ docker run -it --rm binster bash -c "lz4cat /var/lib/apt/lists/*.lz4 | grep ^Fil
 fromdos /tmp/pkgs-$$
 
 cat /tmp/pkgs-$$ | xargs -d'\n' basename -a | sed -e "s/-dbgsym.*_/-/" -e "s/^/#/" > /tmp/names-$$
-paste /tmp/pkgs-$$ /tmp/names-$$ | sed -e "s|^|./download.sh |" | tr '\t' ' '
+paste /tmp/pkgs-$$ /tmp/names-$$ | sed -e "s|^|./process_package.sh |" | tr '\t' ' '
