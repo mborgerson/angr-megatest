@@ -3,11 +3,16 @@ angr megatest
 Tools for large-scale program analysis over the Debian package set, spanning
 many architectures.
 
+**WARNING:** Understand that you will be spinning up over 100k containers
+to do this analysis. This can incur significant cost. Consider limiting your
+testing to check for stability/usage statistics before burning through your 
+cloud budget.
+
 Regenerating list of packages
 -----------------------------
 The list of packages that are tested come straight from the Debian repositories.
-To regenerate the list of packages, build the docker image from the
-`list.dockerfile`, then run the list.sh script.
+To regenerate the list of packages, build the docker image from
+`list.dockerfile`, then run the `list.sh` script.
 
 ```bash
 docker build -t binster -f list.dockerfile .
@@ -57,10 +62,12 @@ docker push yourname/megatest
 Then you can then run the experiment with:
 
 ```
-monitor_experiment -f list -l logs_20200131 -i yourname/megatest
+monitor_experiment -f list -l logs -i yourname/megatest
 ```
 
-**WARNING:** Understand that you will be spinning up over 100k containers
-to do this analysis. This can incur significant cost. Consider limiting your
-testing to check for stability/usage statistics before burning through your 
-cloud budget.
+As jobs complete, the `logs` directory will be populated with a log file for
+each package analyzed. 
+
+Post-processing
+---------------
+FIXME
