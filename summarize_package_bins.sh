@@ -1,4 +1,6 @@
 #!/bin/bash
+# Determine how many packages were tested and which binaries could even start
+# analysis
 echo $(wc -l list | cut -f1 -d' ') original packages in list
 echo $(ls -l logs | cut -f5 -d' ' | grep 111 | wc -l) failed log downloads
 echo $(cat package_report.txt | cut -f1 -d '|' | uniq | wc -l) packages tested

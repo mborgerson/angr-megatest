@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+"""
+Walk through a single error log, discover different instances of the same error.
+Summarize the different instances and provide a sample traceback.
+"""
 import sys
 print('Summary')
 print('=====================================')

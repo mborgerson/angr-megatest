@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+"""
+Walk through all package logs and group errors together
+"""
 
 import os.path
 from tqdm import tqdm
