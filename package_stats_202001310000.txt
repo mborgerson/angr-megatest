@@ -1,0 +1,8 @@
+117528 original packages in list
+131 failed log downloads
+111034 packages tested
+339647 binaries tested
+68 failed elf opens
+247408 failed dbg opens
+336 failed cfg
+91835 success cfg
