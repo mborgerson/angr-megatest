@@ -56,7 +56,7 @@ def doit_raw(pkg_name, elf_path, dbg_path):
         awesome_info(f"SYMBOLS_SUCCESS: elf={elf_path} pkg={pkg_name}")
 
     with catcher(f"CFG_FAIL: elf={elf_path} pkg={pkg_name}"):
-        cfg = elf.analyses.CFG(data_references=True, cross_references=True)
+        cfg = elf.analyses.CFG(data_references=True, cross_references=True, normalize=True)
         awesome_info(f"CFG_SUCCESS: elf={elf_path} pkg={pkg_name}")
 
     l.info("Checking functions...")
