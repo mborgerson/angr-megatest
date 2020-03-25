@@ -1,0 +1,13 @@
+name: Test
+
+on: [push]
+
+jobs:
+  Ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Build 
+      run: |
+        docker build -t megatest .
+        docker run megatest ./process_package.sh s/sssd/sssd-dbus-dbgsym_1.15.0-3+deb9u1_ppc64el.deb
+  
