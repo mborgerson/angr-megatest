@@ -8,7 +8,15 @@ jobs:
     steps:
     - name: Clone Tree
       uses: actions/checkout@v2
-    - name: Build 
+    - name: Create Container 
       run: |
         docker build -t megatest --file Dockerfile .
-        docker run megatest ./process_package.sh s/sssd/sssd-dbus-dbgsym_1.15.0-3+deb9u1_ppc64el.deb
+    - name: Run Experiment
+      run: |
+        while read command; do
+          echo "Running command: $command"
+          echo "---------------------------------------------------------------"
+          docker run megatest $command
+          echo "---------------------------------------------------------------"
+          echo -e "\n\n\n"
+        done <list.25
