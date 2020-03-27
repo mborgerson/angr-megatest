@@ -49,7 +49,7 @@ def parse_summary_file(path):
 for (root, dirs, files) in os.walk('.'):
 	for f in files:
 		if f.endswith('.summary'):
-			parse_summary_file(f)
+			parse_summary_file(os.path.join(root, f))
 
 # Dump this analysis summary to a file
 with open(str(analysis.date), 'w') as f:
