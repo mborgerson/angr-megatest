@@ -13,10 +13,24 @@ jobs:
         docker build -t megatest --file Dockerfile .
     - name: Run Experiment
       run: |
+        mkdir -p logs output
         while read command; do
           echo "Running command: $command"
           echo "---------------------------------------------------------------"
-          docker run megatest $command
+          docker run --name megatest_container megatest $command
+          docker logs megatest_container >> logs/log 2>&1
+          docker rm megatest_container
           echo "---------------------------------------------------------------"
           echo -e "\n\n\n"
         done <list.25
+    - name: Analyze Results
+      run: |
+        pip install tqdm
+        python sort_by_error.py
+        cat package_report.txt
+        for i in output/*; do
+          echo $i
+          python summarize_error.py $i | tee $i.summary
+        done
+        python summarize_all_errors.py
+        cat stats.csv
