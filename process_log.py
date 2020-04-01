@@ -277,40 +277,67 @@ def main():
     args = ap.parse_args()
     process_log(args.log)
     def print_tb(tb):
-        print('\n'.join(tb))
+        print(''.join(tb))
+
+    num_packages = 0
+    num_binaries = 0
+    num_binaries_failed_to_open = 0
+    num_binaries_dbg_failed_to_open = 0
+    num_binaries_cfg_failed = 0
+    num_functions = 0
+    num_functions_not_present_in_cfg = 0
+    num_functions_not_decompiled = 0
+
     for pkg_name in packages:
+        num_packages += 1
         pkg = packages[pkg_name]
         print('Package: ' + pkg.name)
         for bin_name in pkg.binaries:
+            num_binaries += 1
             bin = pkg.binaries[bin_name]
             if not bin.elf_opened_successfully:
                 print('Failed to open binary')
                 print_tb(bin.tb)
+                num_binaries_failed_to_open += 1
                 continue
             elif not bin.dbg_opened_successfully:
                 print('Failed to open debug symbols')
                 print_tb(bin.tb)
+                num_binaries_dbg_failed_to_open += 1
                 continue
             elif not bin.cfg_generated:
                 print('Failed to generate CFG')
                 print_tb(bin.tb)
+                num_binaries_cfg_failed += 1
                 continue
 
             print('  Binary: ' + bin.name)
             for func_name in bin.functions:
+                num_functions += 1
                 func = bin.functions[func_name]
                 print('    Function: ' + func.name)
                 print('      In CFG? %s' % ('Yes' if func.function_present_in_cfg else 'No'))
                 if not func.function_present_in_cfg:
+                    num_functions_not_present_in_cfg += 1
                     continue
                 print('      Decompiled? %s' % ('Yes' if func.decompilation_successful else 'No'))
                 if not func.decompilation_successful:
+                    num_functions_not_decompiled += 1
                     if func.decompilation_timed_out:
                         print('        Timed Out')
                     else:
                         print('---- Traceback:')
                         print_tb(func.tb)
                         print('----\n\n')
+
+    print('num_packages:                     %d' % (num_packages))
+    print('num_binaries:                     %d' % (num_binaries))
+    print('num_binaries_failed_to_open:      %d (%f%%)' % (num_binaries_failed_to_open, 100.0*num_binaries_failed_to_open/num_binaries))
+    print('num_binaries_dbg_failed_to_open:  %d (%f%%)' % (num_binaries_dbg_failed_to_open, 100.0*num_binaries_dbg_failed_to_open/num_binaries))
+    print('num_binaries_cfg_failed:          %d (%f%%)' % (num_binaries_cfg_failed, 100.0*num_binaries_cfg_failed/num_binaries))
+    print('num_functions:                    %d' % (num_functions))
+    print('num_functions_not_present_in_cfg: %d (%f%%)' % (num_functions_not_present_in_cfg, 100.0*num_functions_not_present_in_cfg/num_functions))
+    print('num_functions_not_decompiled:     %d (%f%%)' % (num_functions_not_decompiled, 100.0*num_functions_not_decompiled/num_functions))
 
 if __name__ == '__main__':
     main()
