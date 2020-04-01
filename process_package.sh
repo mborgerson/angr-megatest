@@ -1,21 +1,9 @@
 #!/bin/bash -eux
 
-#MAIN_URL=$1
-##if ! [[ $MAIN_URL =~ ^http.* ]]
-##then
-##	PREFIX=${MAIN_URL:0:1}
-##	[[ $MAIN_URL =~ ^lib.* ]] && PREFIX=${MAIN_URL:0:4}
-##	PACKAGE=${MAIN_URL//_*/}
-##	MAIN_URL=http://cdn-fastly.deb.debian.org/debian/pool/main/$PREFIX/$PACKAGE/$MAIN_URL
-##fi
-#DEBUG_URL=${MAIN_URL/\/debian\//\/debian-debug\/}
-#DEBUG_URL=${DEBUG_URL/_/-dbgsym_}
-
 DEBUG_URL=http://cdn-fastly.deb.debian.org/debian-debug/pool/main/$1
 MAIN_URL=${DEBUG_URL/-debug\//\/}
 MAIN_URL=${MAIN_URL/-dbgsym_/_}
 
-#cd $(mktemp -d)
 wget -c $DEBUG_URL
 wget -c $MAIN_URL
 
