@@ -5,10 +5,14 @@ Process a log file to a more managable form
 
 import argparse
 import re
+import os
+from jinja2 import Environment, FileSystemLoader
+
 
 # Pre-compile regular expressions used
-color_matcher = re.compile('\x1b\[\d+m')
-token_matcher = re.compile('^(?P<lev>\w+)\s+\| (?P<ts>[0-9\-\:\,\s]+) \| MEGATEST \| (?P<token>\w+): (?P<msg>.+)')
+color_matcher = re.compile(r'\x1b\[\d+m')
+token_matcher = re.compile(r'^(?P<lev>\w+)\s+\| (?P<ts>[0-9\-\:\,\s]+) \| MEGATEST \| (?P<token>\w+): (?P<msg>.+)')
+arch_matcher  = re.compile(r'_(\w+).deb$')
 
 # Helper functions
 def strip_colors(l):
@@ -29,10 +33,141 @@ def extract_traceback(f):
             break
     return tb
 
+class Summary:
+    def __init__(self, packages):
+        self.packages = packages
+
+        self.num_packages = 0
+        self.num_binaries = 0
+        self.num_binaries_failed_to_open = 0
+        self.num_binaries_dbg_failed_to_open = 0
+        self.num_binaries_load_timed_out = 0
+        self.num_binaries_load_errored_out = 0
+        self.num_binaries_cfg_timed_out = 0
+        self.num_binaries_cfg_errored_out = 0
+        self.num_binaries_loaded = 0
+        self.num_functions = 0
+        self.num_functions_not_present_in_cfg = 0
+        self.num_functions_not_decompiled = 0
+        self.num_functions_decompilation_timeout = 0
+        self.num_functions_decompilation_errored_out = 0
+        self.num_functions_decompiled = 0
+
+        for pkg_name in self.packages:
+            self.num_packages += 1
+            pkg = packages[pkg_name]
+            for bin_name in pkg.binaries:
+                self.num_binaries += 1
+                bin = pkg.binaries[bin_name]
+
+                if bin.elf_timed_out:
+                    if not bin.elf_opened_successfully:
+                        # Binary failed to open with timeout
+                        self.num_binaries_failed_to_open += 1
+                    elif not bin.dbg_opened_successfully:
+                        # Debug symbols failed to open with timeout
+                        self.num_binaries_dbg_failed_to_open += 1
+
+                    if bin.dbg_opened_successfully:
+                        # Timed out during CFG generation
+                        self.num_binaries_cfg_timed_out += 1
+                    else:
+                        # Timed out during load
+                        self.num_binaries_load_timed_out += 1
+
+                    continue
+
+                # Did not timeout
+
+                if not bin.elf_opened_successfully:
+                    # Error during loading of ELF
+                    self.num_binaries_load_errored_out += 1
+                    self.num_binaries_failed_to_open += 1
+                    continue
+                elif not bin.dbg_opened_successfully:
+                    # Error during loading of debug symbols
+                    self.num_binaries_load_errored_out += 1
+                    self.num_binaries_dbg_failed_to_open += 1
+                    continue
+                elif not bin.cfg_generated:
+                    # Error during CFG creation
+                    self.num_binaries_cfg_errored_out += 1
+                    continue
+
+                self.num_binaries_loaded += 1
+
+                for func_name in bin.functions:
+                    self.num_functions += 1
+                    func = bin.functions[func_name]
+                    if not func.function_present_in_cfg:
+                        self.num_functions_not_present_in_cfg += 1
+                        continue
+                    if not func.decompilation_successful:
+                        self.num_functions_not_decompiled += 1
+                        if func.decompilation_timed_out:
+                            self.num_functions_decompilation_timeout += 1
+                        else:
+                            self.num_functions_decompilation_errored_out += 1
+                    else:
+                        self.num_functions_decompiled += 1
+
+    def get_summary(self, indent):
+        s = ''
+        s += ' '*indent + 'num_packages:                     %d\n' % (self.num_packages)
+        s += ' '*indent + 'num_binaries:                     %d\n' % (self.num_binaries)
+        if self.num_binaries > 0:
+            s += ' '*indent + 'num_binaries_load_errored_out:    %d (%f%%)\n' % (self.num_binaries_load_errored_out, 100.0*self.num_binaries_load_errored_out/self.num_binaries)
+            s += ' '*indent + 'num_binaries_load_timed_out:      %d (%f%%)\n' % (self.num_binaries_load_timed_out, 100.0*self.num_binaries_load_timed_out/self.num_binaries)
+            s += ' '*indent + 'num_binaries_cfg_errored_out:     %d (%f%%)\n' % (self.num_binaries_cfg_errored_out, 100.0*self.num_binaries_cfg_errored_out/self.num_binaries)
+            s += ' '*indent + 'num_binaries_cfg_timed_out:       %d (%f%%)\n' % (self.num_binaries_cfg_timed_out, 100.0*self.num_binaries_cfg_timed_out/self.num_binaries)
+            s += ' '*indent + 'num_binaries_loaded:              %d (%f%%)\n' % (self.num_binaries_loaded, 100.0*self.num_binaries_loaded/self.num_binaries)
+        s += ' '*indent + 'num_functions:                    %d\n' % (self.num_functions)
+        if self.num_functions > 0:
+            s += ' '*indent + 'num_functions_not_present_in_cfg: %d (%f%%)\n' % (self.num_functions_not_present_in_cfg, 100.0*self.num_functions_not_present_in_cfg/self.num_functions)
+            s += ' '*indent + 'num_functions_not_decompiled:     %d (%f%%)\n' % (self.num_functions_not_decompiled, 100.0*self.num_functions_not_decompiled/self.num_functions)
+            s += ' '*indent + 'num_functions_decompiled:         %d (%f%%)\n' % (self.num_functions_decompiled, 100.0*self.num_functions_decompiled/self.num_functions)
+        return s
+
+    def print_console_report(self):
+        for pkg_name in self.packages:
+            pkg = packages[pkg_name]
+            print('Package: ' + pkg.name)
+            for bin_name in pkg.binaries:
+                bin = pkg.binaries[bin_name]
+                if not bin.elf_opened_successfully:
+                    print('Failed to open binary')
+                    print_tb(bin.tb)
+                    continue
+                elif not bin.dbg_opened_successfully:
+                    print('Failed to open debug symbols')
+                    print_tb(bin.tb)
+                    continue
+                elif not bin.cfg_generated:
+                    print('Failed to generate CFG')
+                    print_tb(bin.tb)
+                    continue
+
+                print('  Binary: ' + bin.name)
+                for func_name in bin.functions:
+                    func = bin.functions[func_name]
+                    print('    Function: ' + func.name)
+                    print('      In CFG? %s' % ('Yes' if func.function_present_in_cfg else 'No'))
+                    if not func.function_present_in_cfg:
+                        continue
+                    print('      Decompiled? %s' % ('Yes' if func.decompilation_successful else 'No'))
+                    if not func.decompilation_successful:
+                        if func.decompilation_timed_out:
+                            print('        Timed Out')
+                        else:
+                            print('---- Traceback:')
+                            print_tb('\n'.join(func.tb))
+                            print('----\n\n')
+
 class Package:
     def __init__(self, name):
         self.binaries = {}
         self.name = name
+        self.arch = arch_matcher.findall(name)[-1]
 
     def get_binary(self, name):
         if name not in self.binaries:
@@ -53,9 +188,8 @@ class Binary:
         self.elf_opened_successfully   = False
         self.dbg_opened_successfully   = False
         self.symbols_read_successfully = False
-        self.load_timed_out            = False
         self.cfg_generated             = False
-        self.cfg_timed_out             = False
+        self.elf_timed_out             = False
         self.tb                        = []
 
     def get_func(self, name, addr):
@@ -87,10 +221,6 @@ class Binary:
         self.symbols_read_successfully = True
         self.tb = tb
 
-    def load_timeout(self, tb):
-        self.load_timed_out = True
-        self.tb = tb
-
     def cfg_fail(self, tb):
         self.cfg_generated = False
         self.tb = tb
@@ -99,10 +229,9 @@ class Binary:
         self.cfg_generated = True
         self.tb = tb
 
-    def cfg_timeout(self, tb):
-        self.cfg_timed_out = True
+    def elf_timeout(self, tb):
+        self.elf_timed_out = True
         self.tb = tb
-
 
 class Function:
     def __init__(self, name, addr):
@@ -238,11 +367,9 @@ def process_log(path):
                 'DBG_OPEN_SUCCESS': Binary.dbg_open_success,
                 'SYMBOLS_FAIL':     Binary.symbols_fail,
                 'SYMBOLS_SUCCESS':  Binary.symbols_success,
-                'LOAD_TIMEOUT':     Binary.load_timeout,
                 'CFG_FAIL':         Binary.cfg_fail,
                 'CFG_SUCCESS':      Binary.cfg_success,
-                'CFG_TIMEOUT':      Binary.cfg_timeout,
-                # 'ELF_TIMEOUT' (encompases all above, cannot continue)
+                'ELF_TIMEOUT':      Binary.elf_timeout
             }
 
             tb = []
@@ -279,65 +406,33 @@ def main():
     def print_tb(tb):
         print(''.join(tb))
 
-    num_packages = 0
-    num_binaries = 0
-    num_binaries_failed_to_open = 0
-    num_binaries_dbg_failed_to_open = 0
-    num_binaries_cfg_failed = 0
-    num_functions = 0
-    num_functions_not_present_in_cfg = 0
-    num_functions_not_decompiled = 0
+    # Overall summary for the entire run
+    print('Overall')
+    summary = Summary(packages)
+    print(summary.get_summary(indent=2))
 
+    # Setup Jinja2 template environment
+    env = Environment(loader=FileSystemLoader(searchpath='templates'))
+
+    # Group packages by architecture for arch-specific breakdown
+    pkg_by_arch = {}
     for pkg_name in packages:
-        num_packages += 1
         pkg = packages[pkg_name]
-        print('Package: ' + pkg.name)
-        for bin_name in pkg.binaries:
-            num_binaries += 1
-            bin = pkg.binaries[bin_name]
-            if not bin.elf_opened_successfully:
-                print('Failed to open binary')
-                print_tb(bin.tb)
-                num_binaries_failed_to_open += 1
-                continue
-            elif not bin.dbg_opened_successfully:
-                print('Failed to open debug symbols')
-                print_tb(bin.tb)
-                num_binaries_dbg_failed_to_open += 1
-                continue
-            elif not bin.cfg_generated:
-                print('Failed to generate CFG')
-                print_tb(bin.tb)
-                num_binaries_cfg_failed += 1
-                continue
+        if pkg.arch not in pkg_by_arch:
+            pkg_by_arch[pkg.arch] = {}
+        pkg_by_arch[pkg.arch][pkg.name] = pkg
 
-            print('  Binary: ' + bin.name)
-            for func_name in bin.functions:
-                num_functions += 1
-                func = bin.functions[func_name]
-                print('    Function: ' + func.name)
-                print('      In CFG? %s' % ('Yes' if func.function_present_in_cfg else 'No'))
-                if not func.function_present_in_cfg:
-                    num_functions_not_present_in_cfg += 1
-                    continue
-                print('      Decompiled? %s' % ('Yes' if func.decompilation_successful else 'No'))
-                if not func.decompilation_successful:
-                    num_functions_not_decompiled += 1
-                    if func.decompilation_timed_out:
-                        print('        Timed Out')
-                    else:
-                        print('---- Traceback:')
-                        print_tb(func.tb)
-                        print('----\n\n')
+    summary_by_arch = {}
+    for arch_name in pkg_by_arch:
+        print('Architecture %s: %d package(s)' % (arch_name, len(pkg_by_arch[arch_name])))
+        summary = Summary(pkg_by_arch[arch_name])
+        print(summary.get_summary(indent=2))
+        summary_by_arch[arch_name] = summary
 
-    print('num_packages:                     %d' % (num_packages))
-    print('num_binaries:                     %d' % (num_binaries))
-    print('num_binaries_failed_to_open:      %d (%f%%)' % (num_binaries_failed_to_open, 100.0*num_binaries_failed_to_open/num_binaries))
-    print('num_binaries_dbg_failed_to_open:  %d (%f%%)' % (num_binaries_dbg_failed_to_open, 100.0*num_binaries_dbg_failed_to_open/num_binaries))
-    print('num_binaries_cfg_failed:          %d (%f%%)' % (num_binaries_cfg_failed, 100.0*num_binaries_cfg_failed/num_binaries))
-    print('num_functions:                    %d' % (num_functions))
-    print('num_functions_not_present_in_cfg: %d (%f%%)' % (num_functions_not_present_in_cfg, 100.0*num_functions_not_present_in_cfg/num_functions))
-    print('num_functions_not_decompiled:     %d (%f%%)' % (num_functions_not_decompiled, 100.0*num_functions_not_decompiled/num_functions))
+    # Generate index
+    output_page_path = os.path.join('.', 'index.html')
+    template = env.get_template('template.html')
+    open(output_page_path, 'w').write(template.render(**locals()))
 
 if __name__ == '__main__':
     main()

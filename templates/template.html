@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <title>Hello, world!</title>
+  </head>
+  <body>
+  <main role="main">
+  <div class="container">
+  <div class="col-lg-10 mx-auto mt-5">
+    <h1>angr Megatest Report</h1>
+
+    <h4>Package Summary</h4>
+    <div id="package_chart"></div>
+
+    <h4>Binary Summary</h4>
+    <div id="binary_chart"></div>
+
+    <h4>Function Decompilation Summary</h4>
+    <div id="function_chart"></div>
+  </div>
+  </div>
+  </main>
+
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script type="text/javascript">
+
+
+        var options = {
+          series: [
+            {% for arch in summary_by_arch|sort: %}
+            {
+              name: '{{ arch }}',
+              data: [
+                {{ summary_by_arch[arch].num_packages }},
+              ]
+            },
+            {% endfor %}
+          ],
+          chart: {
+            type: 'bar',
+            height: 150,
+            stacked: true,
+            stackType: '100%'
+          },
+          plotOptions: {
+            bar: {
+              horizontal: true,
+            },
+          },
+          stroke: {
+            width: 1,
+            colors: ['#fff']
+          },
+          xaxis: {
+            categories: [
+              'Packages'
+              ],
+          },
+          tooltip: {
+            y: {
+              formatter: function (val) {
+                return val
+              }
+            }
+          },
+          fill: {
+            opacity: 1
+          
+          },
+          legend: {
+            position: 'top',
+            horizontalAlign: 'left',
+            offsetX: 40
+          }
+          };
+        var chart = new ApexCharts(document.querySelector("#package_chart"), options);
+        chart.render();
+      
+
+
+
+
+        var options = {
+          series: [
+            {
+              name: 'Binary Load Timed Out',
+              data: [
+              {% for arch in summary_by_arch|sort: %}
+                {{ summary_by_arch[arch].num_binaries_load_timed_out }},
+              {% endfor %}
+              ]
+            },
+            {
+              name: 'Binary Load Errored Out',
+              data: [
+              {% for arch in summary_by_arch|sort: %}
+                {{ summary_by_arch[arch].num_binaries_load_errored_out }},
+              {% endfor %}
+              ]
+            },
+            {
+              name: 'CFG Timed Out',
+              data: [
+              {% for arch in summary_by_arch|sort: %}
+                {{ summary_by_arch[arch].num_binaries_cfg_timed_out }},
+              {% endfor %}
+              ]
+            },
+            {
+              name: 'CFG Errored Out',
+              data: [
+              {% for arch in summary_by_arch|sort: %}
+                {{ summary_by_arch[arch].num_binaries_cfg_errored_out }},
+              {% endfor %}
+              ]
+            },
+            {
+              name: 'Binary Loaded Successfully',
+              data: [
+              {% for arch in summary_by_arch|sort: %}
+                {{ summary_by_arch[arch].num_binaries_loaded }},
+              {% endfor %}
+              ]
+            },
+          ],
+          chart: {
+            type: 'bar',
+            height: 350,
+            stacked: true,
+            stackType: '100%'
+          },
+          plotOptions: {
+            bar: {
+              horizontal: true,
+            },
+          },
+          stroke: {
+            width: 1,
+            colors: ['#fff']
+          },
+          xaxis: {
+            categories: [
+              {% for arch in summary_by_arch|sort: %}
+              '{{ arch }}',
+              {% endfor %}
+              ],
+          },
+          tooltip: {
+            y: {
+              formatter: function (val) {
+                return val
+              }
+            }
+          },
+          colors: [ '#ffc425', '#d11141', '#ffc425', '#d11141', '#00b159' ],
+          fill: {
+            opacity: 1
+          
+          },
+          legend: {
+            position: 'top',
+            horizontalAlign: 'left',
+            offsetX: 40
+          }
+          };
+        var chart = new ApexCharts(document.querySelector("#binary_chart"), options);
+        chart.render();
+      
+
+
+
+
+      
+        var options = {
+          series: [
+            {
+              name: 'Not in CFG',
+              data: [
+              {% for arch in summary_by_arch|sort: %}
+                {{ summary_by_arch[arch].num_functions_not_present_in_cfg }},
+              {% endfor %}
+              ]
+            },
+            {
+              name: 'Decompilation Timed Out',
+              data: [
+              {% for arch in summary_by_arch|sort: %}
+                {{ summary_by_arch[arch].num_functions_decompilation_timeout }},
+              {% endfor %}
+              ]
+            },
+            {
+              name: 'Decompilation Errored Out',
+              data: [
+              {% for arch in summary_by_arch|sort: %}
+                {{ summary_by_arch[arch].num_functions_decompilation_errored_out }},
+              {% endfor %}
+              ]
+            },
+            {
+              name: 'Decompilation Successful',
+              data: [
+              {% for arch in summary_by_arch|sort: %}
+                {{ summary_by_arch[arch].num_functions_decompiled }},
+              {% endfor %}
+              ]
+            },
+          ],
+          chart: {
+            type: 'bar',
+            height: 350,
+            stacked: true,
+            stackType: '100%'
+          },
+          plotOptions: {
+            bar: {
+              horizontal: true,
+            },
+          },
+          stroke: {
+            width: 1,
+            colors: ['#fff']
+          },
+          xaxis: {
+            categories: [
+              {% for arch in summary_by_arch|sort: %}
+              '{{ arch }}',
+              {% endfor %}
+              ],
+          },
+          tooltip: {
+            y: {
+              formatter: function (val) {
+                return val
+              }
+            }
+          },
+          colors: [ '#000000', '#ffc425', '#d11141', '#00b159' ],
+          fill: {
+            opacity: 1
+          
+          },
+          legend: {
+            position: 'top',
+            horizontalAlign: 'left',
+            offsetX: 40
+          }
+          };
+        var chart = new ApexCharts(document.querySelector("#function_chart"), options);
+        chart.render();
+      
+    
+
+    </script>
+  </body>
+</html>
