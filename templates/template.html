@@ -16,6 +16,12 @@
   <div class="col-lg-10 mx-auto mt-5">
     <h1>angr Megatest Report</h1>
 
+    <table class="table">
+      <tr><th>Report Created</th><td>{{ now }}</td></tr>
+      <tr><th>Packages Tested</th><td>{{ overall_summary.num_packages }}</td></tr>
+      <tr><th>Docker Image</th><td></td></tr>
+    </table>
+
     <h4>Package Summary</h4>
     <div id="package_chart"></div>
 
@@ -24,6 +30,18 @@
 
     <h4>Function Decompilation Summary</h4>
     <div id="function_chart"></div>
+
+    <h4>Top Errors by Architecture</h4>
+    {% for arch in summary_by_arch|sort: %}
+    <details>
+    <summary>
+    <strong>Top Error for {{ arch }} ({{ summary_by_arch[arch].top_error_count }} instances)</strong>
+    </summary>
+    <pre>
+      {{ summary_by_arch[arch].top_error_tb }}
+    </pre>
+    </details>
+    {% endfor %}
   </div>
   </div>
   </main>
@@ -53,7 +71,7 @@
             type: 'bar',
             height: 150,
             stacked: true,
-            stackType: '100%'
+            // stackType: '100%'
           },
           plotOptions: {
             bar: {
@@ -88,10 +106,6 @@
           };
         var chart = new ApexCharts(document.querySelector("#package_chart"), options);
         chart.render();
-      
-
-
-
 
         var options = {
           series: [
@@ -140,7 +154,7 @@
             type: 'bar',
             height: 350,
             stacked: true,
-            stackType: '100%'
+            // stackType: '100%'
           },
           plotOptions: {
             bar: {
@@ -165,7 +179,7 @@
               }
             }
           },
-          colors: [ '#ffc425', '#d11141', '#ffc425', '#d11141', '#00b159' ],
+          colors: [ '#ffc425', '#d11141', '#775DD0', '#F86624', '#00b159' ],
           fill: {
             opacity: 1
           

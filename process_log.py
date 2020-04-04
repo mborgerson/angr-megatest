@@ -7,7 +7,8 @@ import argparse
 import re
 import os
 from jinja2 import Environment, FileSystemLoader
-
+import datetime
+now = datetime.datetime.now().strftime('%c')
 
 # Pre-compile regular expressions used
 color_matcher = re.compile(r'\x1b\[\d+m')
@@ -52,6 +53,9 @@ class Summary:
         self.num_functions_decompilation_timeout = 0
         self.num_functions_decompilation_errored_out = 0
         self.num_functions_decompiled = 0
+        self.top_error = ''
+        self.top_error_count = 0
+        self.top_error_tb = ''
 
         for pkg_name in self.packages:
             self.num_packages += 1
@@ -127,6 +131,35 @@ class Summary:
             s += ' '*indent + 'num_functions_not_decompiled:     %d (%f%%)\n' % (self.num_functions_not_decompiled, 100.0*self.num_functions_not_decompiled/self.num_functions)
             s += ' '*indent + 'num_functions_decompiled:         %d (%f%%)\n' % (self.num_functions_decompiled, 100.0*self.num_functions_decompiled/self.num_functions)
         return s
+
+    def determine_top_error(self):
+        print('Determining top error...')
+        errors_sample_tb = {}
+        errors = {}
+        for pkg_name in self.packages:
+            pkg = self.packages[pkg_name]
+            for bin_name in pkg.binaries:
+                bin = pkg.binaries[bin_name]
+                if not bin.cfg_generated: continue
+                print('  Binary: ' + bin.name)
+                for func_name in bin.functions:
+                    func = bin.functions[func_name]
+                    if not func.function_present_in_cfg or func.decompilation_timed_out or func.decompilation_successful:
+                        continue
+                    if len(func.tb) == 0:
+                        print('Warning: Error in decompilation without traceback?\n\t%s\n\t%s\n\t%s' % (pkg_name, bin_name, func_name))
+                        continue
+                    err = func.tb[-1].strip()
+                    if err not in errors:
+                        errors_sample_tb[err] = func.tb
+                        errors[err] = 0
+                    errors[err] += 1
+
+        for err in errors:
+            if errors[err] > self.top_error_count:
+                self.top_error_count = errors[err]
+                self.top_error = err
+                self.top_error_tb = '\n'.join(errors_sample_tb[err])
 
     def print_console_report(self):
         for pkg_name in self.packages:
@@ -408,8 +441,8 @@ def main():
 
     # Overall summary for the entire run
     print('Overall')
-    summary = Summary(packages)
-    print(summary.get_summary(indent=2))
+    overall_summary = Summary(packages)
+    print(overall_summary.get_summary(indent=2))
 
     # Setup Jinja2 template environment
     env = Environment(loader=FileSystemLoader(searchpath='templates'))
@@ -422,17 +455,19 @@ def main():
             pkg_by_arch[pkg.arch] = {}
         pkg_by_arch[pkg.arch][pkg.name] = pkg
 
+    # Summarize results for each architecture
     summary_by_arch = {}
     for arch_name in pkg_by_arch:
         print('Architecture %s: %d package(s)' % (arch_name, len(pkg_by_arch[arch_name])))
         summary = Summary(pkg_by_arch[arch_name])
         print(summary.get_summary(indent=2))
         summary_by_arch[arch_name] = summary
+        summary.determine_top_error()
 
     # Generate index
     output_page_path = os.path.join('.', 'index.html')
     template = env.get_template('template.html')
-    open(output_page_path, 'w').write(template.render(**locals()))
+    open(output_page_path, 'w').write(template.render(**locals(), **globals()))
 
 if __name__ == '__main__':
     main()
