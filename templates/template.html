@@ -31,6 +31,17 @@
     <h4>Function Decompilation Summary</h4>
     <div id="function_chart"></div>
 
+
+    <h4>Top Errors Overall</h4>
+    <details>
+    <summary>
+    <strong>{{ overall_summary.top_error_count }} instances</strong>
+    </summary>
+    <pre>
+      {{ overall_summary.top_error_tb }}
+    </pre>
+    </details>
+
     <h4>Top Errors by Architecture</h4>
     {% for arch in summary_by_arch|sort: %}
     <details>

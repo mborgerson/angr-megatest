@@ -443,6 +443,7 @@ def main():
     print('Overall')
     overall_summary = Summary(packages)
     print(overall_summary.get_summary(indent=2))
+    overall_summary.determine_top_error()
 
     # Setup Jinja2 template environment
     env = Environment(loader=FileSystemLoader(searchpath='templates'))
