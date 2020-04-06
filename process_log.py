@@ -28,7 +28,7 @@ def extract_traceback(f):
     """
     tb = []
     while True:
-        l = next(f).rstrip()
+        l = next(f, '').rstrip()
         tb.append(l)
         if not l.startswith('  '):
             break
@@ -407,7 +407,10 @@ def process_log(path):
 
             tb = []
             if token.endswith('_FAIL'):
-                line = next(f)
+                line = next(f, '')
+                # Note: we expect all *_FAILs to be followed by tracebacks. In
+                # the event this changes, this will need to be updated as it
+                # consumes the next line.
                 if line.startswith('Traceback'):
                     tb = extract_traceback(f)
 
