@@ -35,7 +35,7 @@ jobs:
         # python summarize_all_errors.py
         # cat stats.csv
         pip install jinja2
-        python process_log.py
+        python3 process_log.py
 
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
