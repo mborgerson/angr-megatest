@@ -17,7 +17,9 @@ jobs:
         while read command; do
           echo "Running command: $command"
           echo "---------------------------------------------------------------"
+          set +e
           docker run --name megatest_container megatest $command
+          set -e
           docker logs megatest_container >> logs/log 2>&1
           docker rm megatest_container
           echo "---------------------------------------------------------------"
