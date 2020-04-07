@@ -36,6 +36,7 @@ jobs:
         # cat stats.csv
         pip install jinja2
         python3 process_log.py
+        
 
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v3
