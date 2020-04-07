@@ -1,1 +1,526 @@
-<html><head></head><body><h1>It Works!</h1></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <title>angr Megatest Report</title>
+  </head>
+  <body>
+  <main role="main">
+  <div class="container">
+  <div class="col-lg-10 mx-auto mt-5">
+    <h1>angr Megatest Report</h1>
+
+    <table class="table">
+      <tr><th>Report Created</th><td>Tue Apr  7 00:29:43 2020</td></tr>
+      <tr><th>Packages Tested</th><td>5</td></tr>
+      <tr><th>Docker Image</th><td></td></tr>
+    </table>
+
+    <h4>Package Summary</h4>
+    <div id="package_chart"></div>
+
+    <h4>Binary Summary</h4>
+    <div id="binary_chart"></div>
+
+    <h4>Function Decompilation Summary</h4>
+    <div id="function_chart"></div>
+
+
+    <h4>Top Errors Overall</h4>
+    <details>
+    <summary>
+    <strong>438 instances</strong>
+    </summary>
+    <pre>
+        File "./analyze_binary.py", line 21, in catcher
+    yield
+  File "./analyze_binary.py", line 81, in doit_raw
+    decompilation = elf.analyses.Decompiler(cfg.functions[a], cfg=cfg)
+  File "/home/angr/angr-dev/angr/angr/analyses/analysis.py", line 111, in __call__
+    oself.__init__(*args, **kwargs)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/decompiler.py", line 21, in __init__
+    self._decompile()
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/decompiler.py", line 39, in _decompile
+    **self.options_to_params(options_by_class['clinic'])
+  File "/home/angr/angr-dev/angr/angr/analyses/analysis.py", line 111, in __call__
+    oself.__init__(*args, **kwargs)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/clinic.py", line 54, in __init__
+    self._analyze()
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/clinic.py", line 103, in _analyze
+    self._simplify_blocks(stack_pointer_tracker=spt)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/clinic.py", line 172, in _simplify_blocks
+    simplified = self._simplify_block(ail_block, stack_pointer_tracker=stack_pointer_tracker)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/clinic.py", line 190, in _simplify_block
+    stack_pointer_tracker=stack_pointer_tracker,
+  File "/home/angr/angr-dev/angr/angr/analyses/analysis.py", line 111, in __call__
+    oself.__init__(*args, **kwargs)
+  File "/home/angr/angr-dev/ailment/ailment/analyses/block_simplifier.py", line 34, in __init__
+    self._analyze()
+  File "/home/angr/angr-dev/ailment/ailment/analyses/block_simplifier.py", line 44, in _analyze
+    block = self._eliminate_dead_assignments(block)
+  File "/home/angr/angr-dev/ailment/ailment/analyses/block_simplifier.py", line 117, in _eliminate_dead_assignments
+    observation_points=[('node', block.addr, OP_AFTER)]
+  File "/home/angr/angr-dev/angr/angr/analyses/analysis.py", line 111, in __call__
+    oself.__init__(*args, **kwargs)
+  File "/home/angr/angr-dev/angr/angr/analyses/reaching_definitions/reaching_definitions.py", line 121, in __init__
+    self._analyze()
+  File "/home/angr/angr-dev/angr/angr/analyses/forward_analysis/forward_analysis.py", line 221, in _analyze
+    self._analysis_core_graph()
+  File "/home/angr/angr-dev/angr/angr/analyses/forward_analysis/forward_analysis.py", line 240, in _analysis_core_graph
+    changed, output_state = self._run_on_node(n, job_state)
+  File "/home/angr/angr-dev/angr/angr/analyses/reaching_definitions/reaching_definitions.py", line 272, in _run_on_node
+    visited_blocks=self._visited_blocks
+  File "/home/angr/angr-dev/angr/angr/analyses/reaching_definitions/engine_ail.py", line 37, in process
+    block=kwargs.pop('block', None),
+  File "/home/angr/angr-dev/angr/angr/engines/light/engine.py", line 535, in _process
+    self._process_Stmt(whitelist=whitelist)
+  File "/home/angr/angr-dev/angr/angr/engines/light/engine.py", line 552, in _process_Stmt
+    self._ail_handle_Stmt(stmt)
+  File "/home/angr/angr-dev/angr/angr/analyses/reaching_definitions/engine_ail.py", line 67, in _ail_handle_Stmt
+    super(SimEngineRDAIL, self)._ail_handle_Stmt(stmt)
+  File "/home/angr/angr-dev/angr/angr/engines/light/engine.py", line 576, in _ail_handle_Stmt
+    getattr(self, handler)(stmt)
+  File "/home/angr/angr-dev/angr/angr/analyses/reaching_definitions/engine_ail.py", line 171, in _ail_handle_Call
+    killed_vars = [ Register(*self.arch.registers[reg_name]) for reg_name in cc.CALLER_SAVED_REGS ]
+TypeError: 'NoneType' object is not iterable
+    </pre>
+    </details>
+
+    <h4>Top Errors by Architecture</h4>
+    
+    <details>
+    <summary>
+    <strong>Top Error for i386 (0 instances)</strong>
+    </summary>
+    <pre>
+      
+    </pre>
+    </details>
+    
+    <details>
+    <summary>
+    <strong>Top Error for mipsel (67 instances)</strong>
+    </summary>
+    <pre>
+        File "./analyze_binary.py", line 21, in catcher
+    yield
+  File "./analyze_binary.py", line 81, in doit_raw
+    decompilation = elf.analyses.Decompiler(cfg.functions[a], cfg=cfg)
+  File "/home/angr/angr-dev/angr/angr/analyses/analysis.py", line 111, in __call__
+    oself.__init__(*args, **kwargs)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/decompiler.py", line 21, in __init__
+    self._decompile()
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/decompiler.py", line 51, in _decompile
+    codegen = self.project.analyses.StructuredCodeGenerator(self.func, s.result, cfg=self._cfg, kb=self.kb)
+  File "/home/angr/angr-dev/angr/angr/analyses/analysis.py", line 111, in __call__
+    oself.__init__(*args, **kwargs)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1004, in __init__
+    self._analyze()
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1008, in _analyze
+    obj = self._handle(self._sequence)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1083, in _handle
+    return handler(node)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1095, in _handle_Sequence
+    lines.append(self._handle(node))
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1083, in _handle
+    return handler(node)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1119, in _handle_Condition
+    true_node=self._handle(condition_node.true_node) if condition_node.true_node else None,
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1083, in _handle
+    return handler(node)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1088, in _handle_Code
+    return self._handle(node.node)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1083, in _handle
+    return handler(node)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1137, in _handle_MultiNode
+    r = self._handle(n)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1083, in _handle
+    return handler(node)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1170, in _handle_AILBlock
+    cstmt = self._handle(stmt)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1083, in _handle
+    return handler(node)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1204, in _handle_Stmt_Call
+    target = self._handle(stmt.target)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1083, in _handle
+    return handler(node)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1278, in _handle_Expr_Load
+    variable, offset = self._parse_load_addr(expr.addr)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1044, in _parse_load_addr
+    expr = self._handle(addr)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1083, in _handle
+    return handler(node)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1302, in _handle_Expr_BinaryOp
+    return CBinaryOp(expr.op, self._handle(expr.operands[0]), self._handle(expr.operands[1]),
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1083, in _handle
+    return handler(node)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1278, in _handle_Expr_Load
+    variable, offset = self._parse_load_addr(expr.addr)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/structured_codegen.py", line 1074, in _parse_load_addr
+    raise NotImplementedError("Unsupported address %s." % addr)
+NotImplementedError: Unsupported address stack_base-24.
+    </pre>
+    </details>
+    
+    <details>
+    <summary>
+    <strong>Top Error for ppc64el (438 instances)</strong>
+    </summary>
+    <pre>
+        File "./analyze_binary.py", line 21, in catcher
+    yield
+  File "./analyze_binary.py", line 81, in doit_raw
+    decompilation = elf.analyses.Decompiler(cfg.functions[a], cfg=cfg)
+  File "/home/angr/angr-dev/angr/angr/analyses/analysis.py", line 111, in __call__
+    oself.__init__(*args, **kwargs)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/decompiler.py", line 21, in __init__
+    self._decompile()
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/decompiler.py", line 39, in _decompile
+    **self.options_to_params(options_by_class['clinic'])
+  File "/home/angr/angr-dev/angr/angr/analyses/analysis.py", line 111, in __call__
+    oself.__init__(*args, **kwargs)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/clinic.py", line 54, in __init__
+    self._analyze()
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/clinic.py", line 103, in _analyze
+    self._simplify_blocks(stack_pointer_tracker=spt)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/clinic.py", line 172, in _simplify_blocks
+    simplified = self._simplify_block(ail_block, stack_pointer_tracker=stack_pointer_tracker)
+  File "/home/angr/angr-dev/angr/angr/analyses/decompiler/clinic.py", line 190, in _simplify_block
+    stack_pointer_tracker=stack_pointer_tracker,
+  File "/home/angr/angr-dev/angr/angr/analyses/analysis.py", line 111, in __call__
+    oself.__init__(*args, **kwargs)
+  File "/home/angr/angr-dev/ailment/ailment/analyses/block_simplifier.py", line 34, in __init__
+    self._analyze()
+  File "/home/angr/angr-dev/ailment/ailment/analyses/block_simplifier.py", line 44, in _analyze
+    block = self._eliminate_dead_assignments(block)
+  File "/home/angr/angr-dev/ailment/ailment/analyses/block_simplifier.py", line 117, in _eliminate_dead_assignments
+    observation_points=[('node', block.addr, OP_AFTER)]
+  File "/home/angr/angr-dev/angr/angr/analyses/analysis.py", line 111, in __call__
+    oself.__init__(*args, **kwargs)
+  File "/home/angr/angr-dev/angr/angr/analyses/reaching_definitions/reaching_definitions.py", line 121, in __init__
+    self._analyze()
+  File "/home/angr/angr-dev/angr/angr/analyses/forward_analysis/forward_analysis.py", line 221, in _analyze
+    self._analysis_core_graph()
+  File "/home/angr/angr-dev/angr/angr/analyses/forward_analysis/forward_analysis.py", line 240, in _analysis_core_graph
+    changed, output_state = self._run_on_node(n, job_state)
+  File "/home/angr/angr-dev/angr/angr/analyses/reaching_definitions/reaching_definitions.py", line 272, in _run_on_node
+    visited_blocks=self._visited_blocks
+  File "/home/angr/angr-dev/angr/angr/analyses/reaching_definitions/engine_ail.py", line 37, in process
+    block=kwargs.pop('block', None),
+  File "/home/angr/angr-dev/angr/angr/engines/light/engine.py", line 535, in _process
+    self._process_Stmt(whitelist=whitelist)
+  File "/home/angr/angr-dev/angr/angr/engines/light/engine.py", line 552, in _process_Stmt
+    self._ail_handle_Stmt(stmt)
+  File "/home/angr/angr-dev/angr/angr/analyses/reaching_definitions/engine_ail.py", line 67, in _ail_handle_Stmt
+    super(SimEngineRDAIL, self)._ail_handle_Stmt(stmt)
+  File "/home/angr/angr-dev/angr/angr/engines/light/engine.py", line 576, in _ail_handle_Stmt
+    getattr(self, handler)(stmt)
+  File "/home/angr/angr-dev/angr/angr/analyses/reaching_definitions/engine_ail.py", line 171, in _ail_handle_Call
+    killed_vars = [ Register(*self.arch.registers[reg_name]) for reg_name in cc.CALLER_SAVED_REGS ]
+TypeError: 'NoneType' object is not iterable
+    </pre>
+    </details>
+    
+  </div>
+  </div>
+  </main>
+
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script type="text/javascript">
+
+
+        var options = {
+          series: [
+            
+            {
+              name: 'i386',
+              data: [
+                1,
+              ]
+            },
+            
+            {
+              name: 'mipsel',
+              data: [
+                1,
+              ]
+            },
+            
+            {
+              name: 'ppc64el',
+              data: [
+                3,
+              ]
+            },
+            
+          ],
+          chart: {
+            type: 'bar',
+            height: 150,
+            stacked: true,
+            // stackType: '100%'
+          },
+          plotOptions: {
+            bar: {
+              horizontal: true,
+            },
+          },
+          stroke: {
+            width: 1,
+            colors: ['#fff']
+          },
+          xaxis: {
+            categories: [
+              'Packages'
+              ],
+          },
+          tooltip: {
+            y: {
+              formatter: function (val) {
+                return val
+              }
+            }
+          },
+          fill: {
+            opacity: 1
+          
+          },
+          legend: {
+            position: 'top',
+            horizontalAlign: 'left',
+            offsetX: 40
+          }
+          };
+        var chart = new ApexCharts(document.querySelector("#package_chart"), options);
+        chart.render();
+
+        var options = {
+          series: [
+            {
+              name: 'Binary Load Timed Out',
+              data: [
+              
+                0,
+              
+                0,
+              
+                0,
+              
+              ]
+            },
+            {
+              name: 'Binary Load Errored Out',
+              data: [
+              
+                0,
+              
+                0,
+              
+                0,
+              
+              ]
+            },
+            {
+              name: 'CFG Timed Out',
+              data: [
+              
+                1,
+              
+                0,
+              
+                0,
+              
+              ]
+            },
+            {
+              name: 'CFG Errored Out',
+              data: [
+              
+                0,
+              
+                0,
+              
+                0,
+              
+              ]
+            },
+            {
+              name: 'Binary Loaded Successfully',
+              data: [
+              
+                0,
+              
+                5,
+              
+                3,
+              
+              ]
+            },
+          ],
+          chart: {
+            type: 'bar',
+            height: 350,
+            stacked: true,
+            // stackType: '100%'
+          },
+          plotOptions: {
+            bar: {
+              horizontal: true,
+            },
+          },
+          stroke: {
+            width: 1,
+            colors: ['#fff']
+          },
+          xaxis: {
+            categories: [
+              
+              'i386',
+              
+              'mipsel',
+              
+              'ppc64el',
+              
+              ],
+          },
+          tooltip: {
+            y: {
+              formatter: function (val) {
+                return val
+              }
+            }
+          },
+          colors: [ '#ffc425', '#d11141', '#775DD0', '#F86624', '#00b159' ],
+          fill: {
+            opacity: 1
+          
+          },
+          legend: {
+            position: 'top',
+            horizontalAlign: 'left',
+            offsetX: 40
+          }
+          };
+        var chart = new ApexCharts(document.querySelector("#binary_chart"), options);
+        chart.render();
+      
+
+
+
+
+      
+        var options = {
+          series: [
+            {
+              name: 'Not in CFG',
+              data: [
+              
+                0,
+              
+                8,
+              
+                33,
+              
+              ]
+            },
+            {
+              name: 'Decompilation Timed Out',
+              data: [
+              
+                0,
+              
+                3,
+              
+                0,
+              
+              ]
+            },
+            {
+              name: 'Decompilation Errored Out',
+              data: [
+              
+                0,
+              
+                321,
+              
+                566,
+              
+              ]
+            },
+            {
+              name: 'Decompilation Successful',
+              data: [
+              
+                0,
+              
+                345,
+              
+                0,
+              
+              ]
+            },
+          ],
+          chart: {
+            type: 'bar',
+            height: 350,
+            stacked: true,
+            stackType: '100%'
+          },
+          plotOptions: {
+            bar: {
+              horizontal: true,
+            },
+          },
+          stroke: {
+            width: 1,
+            colors: ['#fff']
+          },
+          xaxis: {
+            categories: [
+              
+              'i386',
+              
+              'mipsel',
+              
+              'ppc64el',
+              
+              ],
+          },
+          tooltip: {
+            y: {
+              formatter: function (val) {
+                return val
+              }
+            }
+          },
+          colors: [ '#000000', '#ffc425', '#d11141', '#00b159' ],
+          fill: {
+            opacity: 1
+          
+          },
+          legend: {
+            position: 'top',
+            horizontalAlign: 'left',
+            offsetX: 40
+          }
+          };
+        var chart = new ApexCharts(document.querySelector("#function_chart"), options);
+        chart.render();
+      
+    
+
+    </script>
+  </body>
+</html>
