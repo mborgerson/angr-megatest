@@ -22,7 +22,7 @@ jobs:
           docker rm megatest_container
           echo "---------------------------------------------------------------"
           echo -e "\n\n\n"
-        done <list.5
+        done <list.100
     - name: Analyze Results
       run: |
         # pip install tqdm
