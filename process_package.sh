@@ -32,5 +32,5 @@ do
 	#[ -e $ELF ] || continue
 	BUG=./usr/lib/debug/.build-id/$(file $ELF | sed -e "s/.*=//" -e "s/,.*//" -e "s/^\(..\)/\1\//").debug
 	[ -e $BUG ] || continue
-	~/.virtualenvs/angr/bin/python ./analyze_binary.py $MAIN_URL $ELF $BUG
+	~/.virtualenvs/angr/bin/python ./analyze_binary.py $ELF --package=$MAIN_URL --debug=$BUG
 done
