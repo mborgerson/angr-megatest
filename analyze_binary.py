@@ -216,7 +216,7 @@ def main():
     _pkg_name = args.package
     _elf_path = args.binary
     _use_symbols = args.use_symbols
-    _dbg_path = args.dbg
+    _dbg_path = args.debug
     _cc_timeout = args.cc_timeout
     _dec_timeout = args.dec_timeout
 
