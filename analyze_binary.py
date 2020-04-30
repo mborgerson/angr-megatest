@@ -2,9 +2,14 @@
 
 #pylint:disable=broad-except,logging-fstring-interpolation
 
+import argparse
 import contextlib
 import logging
+import sys
+from typing import Optional
+
 import stopit
+
 import angr
 
 for some_logger in [ logging.getLogger(name) for name in logging.root.manager.loggerDict ]:
@@ -41,26 +46,137 @@ def awesome_warning(msg, **kwargs):
 def awesome_error(msg, **kwargs):
     awesome_log(logging.ERROR, msg, **kwargs)
 
-@stopit.signal_timeoutable(default="TIMEOUT")
-def doit_raw(pkg_name, elf_path, dbg_path):
-    with catcher(f"ELF_OPEN_FAIL: elf={elf_path} pkg={pkg_name}"):
-        elf = angr.Project(elf_path, auto_load_libs=False)
-        awesome_info(f"ELF_OPEN_SUCCESS: elf={elf_path} pkg={pkg_name}")
 
-    with catcher(f"DBG_OPEN_FAIL: dbg={dbg_path} pkg={pkg_name}"):
-        dbg = angr.Project(dbg_path, auto_load_libs=False)
-        awesome_info(f"DBG_OPEN_SUCCESS: elf={elf_path} pkg={pkg_name}")
+class Timeout:
+    def __init__(self, n: Optional[int]):
+        """
+        :param n:   Timeout in seconds, or None to disable it.
+        """
+        self.n = n
+        self._obj = None
 
-    with catcher(f"SYMBOLS_FAIL: elf={elf_path} dbg={dbg_path} pkg={pkg_name}"):
-        symbols = [ (s.name, s.rebased_addr) for s in dbg.loader.symbols if not s.is_import and s.is_function ]
-        awesome_info(f"SYMBOLS_SUCCESS: elf={elf_path} pkg={pkg_name}")
+    def __enter__(self):
+        if self.n is None:
+            # timeout disabled
+            return
 
+        if sys.platform.startswith("win"):
+            # Windows does not support signal-based timeout
+            self._obj = stopit.ThreadingTimeout(self.n)
+        else:
+            self._obj = stopit.SignalTimeout(self.n)
+        return self._obj.__enter__()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._obj is None:
+            return
+        return self._obj.__exit__(exc_type, exc_val, exc_tb)
+
+
+class timeoutable:
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
+    def __call__(self, func):
+        if sys.platform.startswith("win"):
+            return stopit.threading_timeoutable(**self.kwargs)(func)
+        else:
+            return stopit.signal_timeoutable(**self.kwargs)(func)
+
+
+def _doit_core(elf, elf_path: str, pkg_name: str, dbg_path: Optional[str], cc_timeout:Optional[int],
+               dec_timeout:Optional[int]):
+    """
+    :param cc_timeout:  Timeout for calling convention analysis of the entire binary in seconds. Set it to None to
+                        disable timeout.
+    :param dec_timeout: Timeout for decompilation of a function in seconds. Set it to None to disable timeout.
+    """
+
+    if pkg_name is None:
+        pkg_name = "<standalone>"
+
+    # Build CFG
     with catcher(f"CFG_FAIL: elf={elf_path} pkg={pkg_name}"):
         cfg = elf.analyses.CFG(data_references=True, cross_references=True, normalize=True)
         awesome_info(f"CFG_SUCCESS: elf={elf_path} pkg={pkg_name}")
 
+    # ignore PLTs, alignments, and SimProcedures
+    funcs = [ func for func in cfg.functions.values()
+              if not func.is_plt
+              and not func.is_simprocedure
+              and not func.alignment
+              ]
+
+    # full-program calling convention analysis with variable recovery
+    with Timeout(cc_timeout) as t:
+        with catcher(f"CC_FAIL: elf={elf_path}, pkg={pkg_name} dbg={dbg_path}"):
+            elf.analyses.CompleteCallingConventions(recover_variables=True)
+            awesome_info(f"CC_SUCCESS: elf={elf_path}, pkg={pkg_name}, dbg={dbg_path}")
+    if cc_timeout and not t:
+        awesome_warning(f"CC_TIMEOUT: elf={elf_path}, pkg={pkg_name}, dbg={dbg_path}")
+
+    for i, func in enumerate(funcs):
+        id_str = f"function={func.name} address={hex(func.addr)} progress={i}/{len(funcs)} elf={elf_path} dbg={dbg_path} pkg={pkg_name}"
+        with Timeout(dec_timeout) as t:
+            with catcher(f"DECOMPILER_FAIL: {id_str}", stop=False):
+                decompilation = elf.analyses.Decompiler(func, cfg=cfg)
+                with catcher(f"CODEGEN_FAIL: {id_str}", stop=False):
+                    text = decompilation.codegen.text
+                    assert text
+                    if "None" in text:
+                        awesome_warning(f"CODEGEN_WARNING: 'None': present {id_str}")
+                    awesome_info(f"DECOMPILER_SUCCESS: {id_str}")
+        if dec_timeout and not t:
+            awesome_warning(f"DECOMPILER_TIMEOUT: {id_str}")
+
+    return cfg
+
+
+@timeoutable(default="TIMEOUT")
+def doit_raw(elf_path:str, pkg_name:Optional[str]=None, cc_timeout:Optional[int]=30, dec_timeout:Optional[int]=5):
+    if pkg_name is None:
+        pkg_name = "<standalone>"
+
+    with catcher(f"ELF_OPEN_FAIL: elf={elf_path} pkg={pkg_name}"):
+        elf = angr.Project(elf_path, auto_load_libs=False, load_debug_info=True)
+        awesome_info(f"ELF_OPEN_SUCCESS: elf={elf_path} pkg={pkg_name}")
+
+    _doit_core(elf, elf_path, pkg_name, None, cc_timeout, dec_timeout)
+
+
+@timeoutable(default="TIMEOUT")
+def doit_raw_with_symbols(elf_path, pkg_name:Optional[str]=None, dbg_path:Optional[str]=None,
+                          cc_timeout:Optional[int]=30, dec_timeout:Optional[int]=5):
+    if pkg_name is None:
+        pkg_name = "<standalone>"
+
+    with catcher(f"ELF_OPEN_FAIL: elf={elf_path} pkg={pkg_name}"):
+        elf = angr.Project(elf_path, auto_load_libs=False, load_debug_info=True)
+        awesome_info(f"ELF_OPEN_SUCCESS: elf={elf_path} pkg={pkg_name}")
+
+    if dbg_path:
+        # Load symbols from the dbg file
+        with catcher(f"DBG_OPEN_FAIL: dbg={dbg_path} pkg={pkg_name}"):
+            dbg = angr.Project(dbg_path, auto_load_libs=False)
+            awesome_info(f"DBG_OPEN_SUCCESS: elf={elf_path} pkg={pkg_name}")
+
+        with catcher(f"SYMBOLS_FAIL: elf={elf_path} dbg={dbg_path} pkg={pkg_name}"):
+            symbols = [ (s.name, s.rebased_addr) for s in dbg.loader.symbols if not s.is_import and s.is_function ]
+            awesome_info(f"SYMBOLS_SUCCESS: elf={elf_path} pkg={pkg_name}")
+    else:
+        # Load symbols from the ELF file
+        with catcher(f"SYMBOLS_FAIL: elf={elf_path} pkg={pkg_name}"):
+            symbols = [ (s.name, s.rebased_addr) for s in elf.loader.symbols if not s.is_import and s.is_function ]
+            awesome_info(f"SYMBOLS_SUCCESS: elf={elf_path} pkg={pkg_name}")
+
+    if not symbols:
+        awesome_info(f"SYMBOLS_FAIL: No symbol available. elf={elf_path} pkg={pkg_name} dbg={dbg_path}")
+        return
+
+    cfg = _doit_core(elf, elf_path, pkg_name, dbg_path, cc_timeout, dec_timeout)
+
     l.info("Checking functions...")
-    for i,(s,a) in enumerate(symbols):
+    for i, (s, a) in enumerate(symbols):
         id_str = f"function={s} address={hex(a)} progress={i}/{len(symbols)} elf={elf_path} dbg={dbg_path} pkg={pkg_name}"
         if a in cfg.functions:
             awesome_info(f"FUNCTION_PRESENT_SUCCESS: {id_str}")
@@ -68,32 +184,47 @@ def doit_raw(pkg_name, elf_path, dbg_path):
             awesome_warning(f"FUNCTION_PRESENT_FAIL: {id_str}")
             continue
 
-        with stopit.SignalTimeout(5) as t:
-            with catcher(f"DECOMPILER_FAIL: {id_str}", stop=False):
-                decompilation = elf.analyses.Decompiler(cfg.functions[a], cfg=cfg)
-                with catcher(f"CODEGEN_FAIL: {id_str}", stop=False):
-                    text = decompilation.codegen.text
-                    assert text
-                    if "None" in text:
-                        awesome_warning(f"CODEGEN_WARNING: 'None': present {id_str}")
-                    awesome_info(f"DECOMPILER_SUCCESS: {id_str}")
-        if not t:
-            awesome_warning(f"DECOMPILER_TIMEOUT: {id_str}")
 
-def doit(pkg_name, elf_path, dbg_path, timeout=3600):
+def doit(pkg_name, elf_path, dbg_path, use_symbols, timeout:int=3600, cc_timeout:Optional[int]=30,
+         dec_timeout:Optional[int]=5):
     try:
-        return doit_raw(pkg_name, elf_path, dbg_path, timeout=timeout) #pylint:disable=unexpected-keyword-arg
+        if use_symbols:
+            return doit_raw_with_symbols(elf_path, pkg_name=pkg_name, dbg_path=dbg_path, timeout=timeout,  # pylint:disable=unexpected-keyword-arg
+                                         cc_timeout=cc_timeout, dec_timeout=dec_timeout)
+        else:
+            return doit_raw(elf_path, pkg_name=pkg_name, timeout=timeout,  # pylint:disable=unexpected-keyward-arg
+                            cc_timeout=cc_timeout, dec_timeout=dec_timeout)
     except Abort:
         return None
     except Exception:
         awesome_error("MYSTERY_FAIL: elf={elf_path} dbg={dbg_path} pkg={pkg_name}", exc_info=True)
 
-if __name__ == '__main__':
-    import sys
-    _pkg_name = sys.argv[1]
-    _elf_path = sys.argv[2]
-    _dbg_path = sys.argv[3]
 
-    if doit(_pkg_name, _elf_path, _dbg_path) == "TIMEOUT":
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("binary", type=str, help="Path to the binary file.")
+    parser.add_argument("--package", type=str, help="Package name or URL.", default=None)
+    parser.add_argument("--use-symbols", action="store_true", help="Should debug symbols be used to verify functions.",
+                        default=False)
+    parser.add_argument("--debug", type=str, help="Path to the debug symbol file.", default=None)
+    parser.add_argument("--cc-timeout", type=int,
+                        help="Timeout of calling convention analysis on each binary in seconds.",
+                        default=None)
+    parser.add_argument("--dec-timeout", type=int, help="Timeout of decompiling a function in seconds.", default=None)
+    args = parser.parse_args()
+
+    _pkg_name = args.package
+    _elf_path = args.binary
+    _use_symbols = args.use_symbols
+    _dbg_path = args.debug
+    _cc_timeout = args.cc_timeout
+    _dec_timeout = args.dec_timeout
+
+    if doit(_pkg_name, _elf_path, _dbg_path, _use_symbols,
+            cc_timeout=_cc_timeout, dec_timeout=_dec_timeout) == "TIMEOUT":
         awesome_error(f"ELF_TIMEOUT: elf={_elf_path} dbg={_dbg_path} pkg={_pkg_name}")
     l.info(f"RESULTS: elf={_elf_path} dbg={_dbg_path} pkg={_pkg_name} reasons={reasons}")
+
+
+if __name__ == '__main__':
+    main()
