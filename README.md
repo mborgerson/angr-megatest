@@ -13,8 +13,11 @@ Regenerating list of packages
 The list of packages that are tested come straight from the Debian repositories.
 To regenerate the list of packages, build the docker image from
 `list.dockerfile`, then run the `generate_package_list.sh` script.
+You will need the program `fromdos` installed, available in the `tofrodos`
+package.
 
 ```bash
+sudo apt install tofrodos
 docker build -t binster -f list.dockerfile .
 ./generate_package_list.sh > list
 ```
