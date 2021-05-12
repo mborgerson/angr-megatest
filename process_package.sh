@@ -18,8 +18,8 @@ MAIN_URL=${DEBUG_URL/-debug\//\/}
 MAIN_URL=${MAIN_URL/-dbgsym_/_}
 
 #cd $(mktemp -d)
-wget -c $DEBUG_URL
-wget -c $MAIN_URL
+wget -q -c $DEBUG_URL
+wget -q -c $MAIN_URL
 
 MAIN_DEB=$(basename $MAIN_URL)
 DEBUG_DEB=$(basename $DEBUG_URL)
