@@ -24,6 +24,7 @@ mv "$ROOT/list2" "$ROOT/list"
 
 TEMP=$(mktemp -d)
 cd "$TEMP"
-$ROOT/$CMD > "$LOG_DIR/$PACKAGE.log" 2>&1
+echo "$CMD" > "$LOG_DIR/$PACKAGE.log"
+$ROOT/$CMD >> "$LOG_DIR/$PACKAGE.log" 2>&1
 cd -
 rm -rf "$TEMP"
