@@ -26,5 +26,5 @@ TEMP=$(mktemp -d)
 cd "$TEMP"
 echo "$CMD" > "$LOG_DIR/$PACKAGE.log"
 $ROOT/$CMD >> "$LOG_DIR/$PACKAGE.log" 2>&1
-cd -
+cd ..
 rm -rf "$TEMP"

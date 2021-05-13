@@ -7,10 +7,16 @@ import os.path
 from tqdm import tqdm
 import string
 import ast
+import sys
 
 def main():
+    if len(sys.argv) == 1:
+        directory = 'logs'
+    else:
+        directory = sys.argv[1]
+
     num_files = 0
-    for root, dirs, files in os.walk('logs'):
+    for root, dirs, files in os.walk(directory):
         num_files += len(files)
   
     outfiles = {}
@@ -18,7 +24,7 @@ def main():
     package_report = open('package_report.txt', 'w')
 
     t = tqdm(total=num_files, unit='logs')
-    for root, dirs, files in os.walk('logs'):
+    for root, dirs, files in os.walk(directory):
         for f in files:
             with open(os.path.join(root, f), 'r') as f:
                 for l in f:
