@@ -9,6 +9,7 @@ import sys
 from typing import Optional
 
 import stopit
+import ipdb
 
 import angr
 
@@ -21,15 +22,17 @@ l.setLevel('INFO')
 class Abort(Exception): pass
 
 @contextlib.contextmanager
-def catcher(s, stop=True):
+def catcher(s, stop=True, pdb=False):
     try:
         yield
     except stopit.utils.TimeoutException:
         raise
-    except Exception:
+    except Exception as e:
         awesome_error(s, exc_info=True)
+        if pdb:
+            ipdb.post_mortem()
         if stop:
-            raise Abort()
+            raise Abort() from e
 
 reasons = { }
 
@@ -58,7 +61,7 @@ class Timeout:
     def __enter__(self):
         if self.n is None:
             # timeout disabled
-            return
+            return None
 
         if sys.platform.startswith("win"):
             # Windows does not support signal-based timeout
@@ -69,7 +72,7 @@ class Timeout:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self._obj is None:
-            return
+            return None
         return self._obj.__exit__(exc_type, exc_val, exc_tb)
 
 
@@ -85,7 +88,7 @@ class timeoutable:
 
 
 def _doit_core(elf, elf_path: str, pkg_name: str, dbg_path: Optional[str], cc_timeout:Optional[int],
-               dec_timeout:Optional[int]):
+               dec_timeout:Optional[int], pdb:bool):
     """
     :param cc_timeout:  Timeout for calling convention analysis of the entire binary in seconds. Set it to None to
                         disable timeout.
@@ -96,7 +99,7 @@ def _doit_core(elf, elf_path: str, pkg_name: str, dbg_path: Optional[str], cc_ti
         pkg_name = "<standalone>"
 
     # Build CFG
-    with catcher(f"CFG_FAIL: elf={elf_path} pkg={pkg_name}"):
+    with catcher(f"CFG_FAIL: elf={elf_path} pkg={pkg_name}", pdb=pdb):
         cfg = elf.analyses.CFG(data_references=True, cross_references=True, normalize=True)
         awesome_info(f"CFG_SUCCESS: elf={elf_path} pkg={pkg_name}")
 
@@ -109,7 +112,7 @@ def _doit_core(elf, elf_path: str, pkg_name: str, dbg_path: Optional[str], cc_ti
 
     # full-program calling convention analysis with variable recovery
     with Timeout(cc_timeout) as t:
-        with catcher(f"CC_FAIL: elf={elf_path}, pkg={pkg_name} dbg={dbg_path}"):
+        with catcher(f"CC_FAIL: elf={elf_path}, pkg={pkg_name} dbg={dbg_path}", pdb=pdb):
             elf.analyses.CompleteCallingConventions(recover_variables=True)
             awesome_info(f"CC_SUCCESS: elf={elf_path}, pkg={pkg_name}, dbg={dbg_path}")
     if cc_timeout and not t:
@@ -118,9 +121,9 @@ def _doit_core(elf, elf_path: str, pkg_name: str, dbg_path: Optional[str], cc_ti
     for i, func in enumerate(funcs):
         id_str = f"function={func.name} address={hex(func.addr)} progress={i}/{len(funcs)} elf={elf_path} dbg={dbg_path} pkg={pkg_name}"
         with Timeout(dec_timeout) as t:
-            with catcher(f"DECOMPILER_FAIL: {id_str}", stop=False):
+            with catcher(f"DECOMPILER_FAIL: {id_str}", stop=False, pdb=pdb):
                 decompilation = elf.analyses.Decompiler(func, cfg=cfg)
-                with catcher(f"CODEGEN_FAIL: {id_str}", stop=False):
+                with catcher(f"CODEGEN_FAIL: {id_str}", stop=False, pdb=pdb):
                     text = decompilation.codegen.text
                     assert text
                     if "None" in text:
@@ -133,39 +136,39 @@ def _doit_core(elf, elf_path: str, pkg_name: str, dbg_path: Optional[str], cc_ti
 
 
 @timeoutable(default="TIMEOUT")
-def doit_raw(elf_path:str, pkg_name:Optional[str]=None, cc_timeout:Optional[int]=30, dec_timeout:Optional[int]=5):
+def doit_raw(elf_path:str, pkg_name:Optional[str]=None, cc_timeout:Optional[int]=30, dec_timeout:Optional[int]=5, pdb=False):
     if pkg_name is None:
         pkg_name = "<standalone>"
 
-    with catcher(f"ELF_OPEN_FAIL: elf={elf_path} pkg={pkg_name}"):
+    with catcher(f"ELF_OPEN_FAIL: elf={elf_path} pkg={pkg_name}", pdb=pdb):
         elf = angr.Project(elf_path, auto_load_libs=False, load_debug_info=True)
         awesome_info(f"ELF_OPEN_SUCCESS: elf={elf_path} pkg={pkg_name}")
 
-    _doit_core(elf, elf_path, pkg_name, None, cc_timeout, dec_timeout)
+    _doit_core(elf, elf_path, pkg_name, None, cc_timeout, dec_timeout, pdb)
 
 
 @timeoutable(default="TIMEOUT")
 def doit_raw_with_symbols(elf_path, pkg_name:Optional[str]=None, dbg_path:Optional[str]=None,
-                          cc_timeout:Optional[int]=30, dec_timeout:Optional[int]=5):
+                          cc_timeout:Optional[int]=30, dec_timeout:Optional[int]=5, pdb=False):
     if pkg_name is None:
         pkg_name = "<standalone>"
 
-    with catcher(f"ELF_OPEN_FAIL: elf={elf_path} pkg={pkg_name}"):
+    with catcher(f"ELF_OPEN_FAIL: elf={elf_path} pkg={pkg_name}", pdb=pdb):
         elf = angr.Project(elf_path, auto_load_libs=False, load_debug_info=True)
         awesome_info(f"ELF_OPEN_SUCCESS: elf={elf_path} pkg={pkg_name}")
 
     if dbg_path:
         # Load symbols from the dbg file
-        with catcher(f"DBG_OPEN_FAIL: dbg={dbg_path} pkg={pkg_name}"):
+        with catcher(f"DBG_OPEN_FAIL: dbg={dbg_path} pkg={pkg_name}", pdb=pdb):
             dbg = angr.Project(dbg_path, auto_load_libs=False)
             awesome_info(f"DBG_OPEN_SUCCESS: elf={elf_path} pkg={pkg_name}")
 
-        with catcher(f"SYMBOLS_FAIL: elf={elf_path} dbg={dbg_path} pkg={pkg_name}"):
+        with catcher(f"SYMBOLS_FAIL: elf={elf_path} dbg={dbg_path} pkg={pkg_name}", pdb=pdb):
             symbols = [ (s.name, s.rebased_addr) for s in dbg.loader.symbols if not s.is_import and s.is_function ]
             awesome_info(f"SYMBOLS_SUCCESS: elf={elf_path} pkg={pkg_name}")
     else:
         # Load symbols from the ELF file
-        with catcher(f"SYMBOLS_FAIL: elf={elf_path} pkg={pkg_name}"):
+        with catcher(f"SYMBOLS_FAIL: elf={elf_path} pkg={pkg_name}", pdb=pdb):
             symbols = [ (s.name, s.rebased_addr) for s in elf.loader.symbols if not s.is_import and s.is_function ]
             awesome_info(f"SYMBOLS_SUCCESS: elf={elf_path} pkg={pkg_name}")
 
@@ -173,7 +176,7 @@ def doit_raw_with_symbols(elf_path, pkg_name:Optional[str]=None, dbg_path:Option
         awesome_info(f"SYMBOLS_FAIL: No symbol available. elf={elf_path} pkg={pkg_name} dbg={dbg_path}")
         return
 
-    cfg = _doit_core(elf, elf_path, pkg_name, dbg_path, cc_timeout, dec_timeout)
+    cfg = _doit_core(elf, elf_path, pkg_name, dbg_path, cc_timeout, dec_timeout, pdb)
 
     l.info("Checking functions...")
     for i, (s, a) in enumerate(symbols):
@@ -186,16 +189,16 @@ def doit_raw_with_symbols(elf_path, pkg_name:Optional[str]=None, dbg_path:Option
 
 
 def doit(pkg_name, elf_path, dbg_path, use_symbols, timeout:int=3600, cc_timeout:Optional[int]=30,
-         dec_timeout:Optional[int]=5):
+         dec_timeout:Optional[int]=5, pdb=False):
     try:
         if use_symbols:
-            return doit_raw_with_symbols(elf_path, pkg_name=pkg_name, dbg_path=dbg_path, timeout=timeout,  # pylint:disable=unexpected-keyword-arg
-                                         cc_timeout=cc_timeout, dec_timeout=dec_timeout)
+            doit_raw_with_symbols(elf_path, pkg_name=pkg_name, dbg_path=dbg_path, timeout=timeout,  # pylint:disable=unexpected-keyword-arg
+                                  cc_timeout=cc_timeout, dec_timeout=dec_timeout, pdb=pdb)
         else:
-            return doit_raw(elf_path, pkg_name=pkg_name, timeout=timeout,  # pylint:disable=unexpected-keyward-arg
-                            cc_timeout=cc_timeout, dec_timeout=dec_timeout)
+            doit_raw(elf_path, pkg_name=pkg_name, timeout=timeout,  # pylint:disable=unexpected-keyword-arg
+                     cc_timeout=cc_timeout, dec_timeout=dec_timeout, pdb=pdb)
     except Abort:
-        return None
+        return
     except Exception:
         awesome_error("MYSTERY_FAIL: elf={elf_path} dbg={dbg_path} pkg={pkg_name}", exc_info=True)
 
@@ -211,6 +214,8 @@ def main():
                         help="Timeout of calling convention analysis on each binary in seconds.",
                         default=None)
     parser.add_argument("--dec-timeout", type=int, help="Timeout of decompiling a function in seconds.", default=None)
+    parser.add_argument("--pdb", help="Start a debug shell for each caught error",
+                        default=False, action='store_true')
     args = parser.parse_args()
 
     _pkg_name = args.package
@@ -219,9 +224,10 @@ def main():
     _dbg_path = args.debug
     _cc_timeout = args.cc_timeout
     _dec_timeout = args.dec_timeout
+    _pdb = args.pdb
 
     if doit(_pkg_name, _elf_path, _dbg_path, _use_symbols,
-            cc_timeout=_cc_timeout, dec_timeout=_dec_timeout) == "TIMEOUT":
+            cc_timeout=_cc_timeout, dec_timeout=_dec_timeout, pdb=_pdb) == "TIMEOUT":
         awesome_error(f"ELF_TIMEOUT: elf={_elf_path} dbg={_dbg_path} pkg={_pkg_name}")
     l.info(f"RESULTS: elf={_elf_path} dbg={_dbg_path} pkg={_pkg_name} reasons={reasons}")
 
