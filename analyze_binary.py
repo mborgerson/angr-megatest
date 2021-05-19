@@ -88,7 +88,7 @@ class timeoutable:
 
 
 def _doit_core(elf, elf_path: str, pkg_name: str, dbg_path: Optional[str], cc_timeout:Optional[int],
-               dec_timeout:Optional[int], pdb:bool):
+               dec_timeout:Optional[int], pdb:bool, func_name:Optional[str]):
     """
     :param cc_timeout:  Timeout for calling convention analysis of the entire binary in seconds. Set it to None to
                         disable timeout.
@@ -118,10 +118,23 @@ def _doit_core(elf, elf_path: str, pkg_name: str, dbg_path: Optional[str], cc_ti
     if cc_timeout and not t:
         awesome_warning(f"CC_TIMEOUT: elf={elf_path}, pkg={pkg_name}, dbg={dbg_path}")
 
+    func_addr = None
+    if func_name is not None:
+        try:
+            func_addr = int(func_name, 0)
+            func_name = None
+        except ValueError:
+            pass
+
     for i, func in enumerate(funcs):
         if len(func.graph) == 1 and next(func.blocks).instructions == 1:
             # skip completely empty functions
             continue
+        if (func_name is not None and func_name != func.name) or \
+           (func_addr is not None and func_addr != func.addr):
+            # skip all but the specified function
+            continue
+
         id_str = f"function={func.name} address={hex(func.addr)} progress={i}/{len(funcs)} elf={elf_path} dbg={dbg_path} pkg={pkg_name}"
         with Timeout(dec_timeout) as t:
             with catcher(f"DECOMPILER_FAIL: {id_str}", stop=False, pdb=pdb):
@@ -139,7 +152,7 @@ def _doit_core(elf, elf_path: str, pkg_name: str, dbg_path: Optional[str], cc_ti
 
 
 @timeoutable(default="TIMEOUT")
-def doit_raw(elf_path:str, pkg_name:Optional[str]=None, cc_timeout:Optional[int]=30, dec_timeout:Optional[int]=5, pdb=False):
+def doit_raw(elf_path:str, pkg_name:Optional[str]=None, cc_timeout:Optional[int]=30, dec_timeout:Optional[int]=5, pdb=False, func=None):
     if pkg_name is None:
         pkg_name = "<standalone>"
 
@@ -147,12 +160,13 @@ def doit_raw(elf_path:str, pkg_name:Optional[str]=None, cc_timeout:Optional[int]
         elf = angr.Project(elf_path, auto_load_libs=False, load_debug_info=True)
         awesome_info(f"ELF_OPEN_SUCCESS: elf={elf_path} pkg={pkg_name}")
 
-    _doit_core(elf, elf_path, pkg_name, None, cc_timeout, dec_timeout, pdb)
+    _doit_core(elf, elf_path, pkg_name, None, cc_timeout, dec_timeout, pdb, func)
 
 
 @timeoutable(default="TIMEOUT")
 def doit_raw_with_symbols(elf_path, pkg_name:Optional[str]=None, dbg_path:Optional[str]=None,
-                          cc_timeout:Optional[int]=30, dec_timeout:Optional[int]=5, pdb=False):
+                          cc_timeout:Optional[int]=30, dec_timeout:Optional[int]=5, pdb=False,
+                          func=None):
     if pkg_name is None:
         pkg_name = "<standalone>"
 
@@ -179,7 +193,7 @@ def doit_raw_with_symbols(elf_path, pkg_name:Optional[str]=None, dbg_path:Option
         awesome_info(f"SYMBOLS_FAIL: No symbol available. elf={elf_path} pkg={pkg_name} dbg={dbg_path}")
         return
 
-    cfg = _doit_core(elf, elf_path, pkg_name, dbg_path, cc_timeout, dec_timeout, pdb)
+    cfg = _doit_core(elf, elf_path, pkg_name, dbg_path, cc_timeout, dec_timeout, pdb, func)
 
     l.info("Checking functions...")
     for i, (s, a) in enumerate(symbols):
@@ -192,14 +206,14 @@ def doit_raw_with_symbols(elf_path, pkg_name:Optional[str]=None, dbg_path:Option
 
 
 def doit(pkg_name, elf_path, dbg_path, use_symbols, timeout:int=3600, cc_timeout:Optional[int]=30,
-         dec_timeout:Optional[int]=5, pdb=False):
+         dec_timeout:Optional[int]=5, pdb=False, func=None):
     try:
         if use_symbols:
             doit_raw_with_symbols(elf_path, pkg_name=pkg_name, dbg_path=dbg_path, timeout=timeout,  # pylint:disable=unexpected-keyword-arg
-                                  cc_timeout=cc_timeout, dec_timeout=dec_timeout, pdb=pdb)
+                                  cc_timeout=cc_timeout, dec_timeout=dec_timeout, pdb=pdb, func=func)
         else:
             doit_raw(elf_path, pkg_name=pkg_name, timeout=timeout,  # pylint:disable=unexpected-keyword-arg
-                     cc_timeout=cc_timeout, dec_timeout=dec_timeout, pdb=pdb)
+                     cc_timeout=cc_timeout, dec_timeout=dec_timeout, pdb=pdb, func=func)
     except Abort:
         return
     except Exception:
@@ -219,6 +233,7 @@ def main():
     parser.add_argument("--dec-timeout", type=int, help="Timeout of decompiling a function in seconds.", default=None)
     parser.add_argument("--pdb", help="Start a debug shell for each caught error",
                         default=False, action='store_true')
+    parser.add_argument("--func", type=str, help="Only analyze this function", default=None)
     args = parser.parse_args()
 
     _pkg_name = args.package
@@ -228,9 +243,10 @@ def main():
     _cc_timeout = args.cc_timeout
     _dec_timeout = args.dec_timeout
     _pdb = args.pdb
+    _func = args.func
 
     if doit(_pkg_name, _elf_path, _dbg_path, _use_symbols,
-            cc_timeout=_cc_timeout, dec_timeout=_dec_timeout, pdb=_pdb) == "TIMEOUT":
+            cc_timeout=_cc_timeout, dec_timeout=_dec_timeout, pdb=_pdb, func=_func) == "TIMEOUT":
         awesome_error(f"ELF_TIMEOUT: elf={_elf_path} dbg={_dbg_path} pkg={_pkg_name}")
     l.info(f"RESULTS: elf={_elf_path} dbg={_dbg_path} pkg={_pkg_name} reasons={reasons}")
 
