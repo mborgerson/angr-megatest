@@ -119,6 +119,9 @@ def _doit_core(elf, elf_path: str, pkg_name: str, dbg_path: Optional[str], cc_ti
         awesome_warning(f"CC_TIMEOUT: elf={elf_path}, pkg={pkg_name}, dbg={dbg_path}")
 
     for i, func in enumerate(funcs):
+        if len(func.graph) == 1 and next(func.blocks).instructions == 1:
+            # skip completely empty functions
+            continue
         id_str = f"function={func.name} address={hex(func.addr)} progress={i}/{len(funcs)} elf={elf_path} dbg={dbg_path} pkg={pkg_name}"
         with Timeout(dec_timeout) as t:
             with catcher(f"DECOMPILER_FAIL: {id_str}", stop=False, pdb=pdb):
